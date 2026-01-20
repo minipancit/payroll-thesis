@@ -125,7 +125,7 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
 
                 // Employee Information
-                'employee_id' => 'EMP-001',
+                'employee_id' => 'EMP-002',
                 'employee_type' => 'regular',
                 'department' => 'Operations',
                 'position' => 'Staff',
