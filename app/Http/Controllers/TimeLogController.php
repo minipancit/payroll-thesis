@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\TimeLog;
 use App\Services\DTRService;
 use App\Helpers\GeoHelper;
+use App\Models\DailyTimeRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,14 +21,13 @@ class TimeLogController extends Controller
         $this->dtrService = $dtrService;
     }
     
-    public function timeIn(Request $request, $eventId)
+    public function timeIn(Request $request, Event $event)
     {
         $request->validate([
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
         ]);
         
-        $event = Event::findOrFail($eventId);
         
         if (!$event->latitude || !$event->longitude) {
             return response()->json([
@@ -35,7 +35,6 @@ class TimeLogController extends Controller
                 'message' => 'Event location not set'
             ], 400);
         }
-        
         $distance = GeoHelper::calculateDistance(
             $request->latitude,
             $request->longitude,
@@ -45,12 +44,12 @@ class TimeLogController extends Controller
         
         $isWithinRadius = $distance <= 50;
         
+
         $userId = Auth::id();
         $now = Carbon::now();
         
-        // Check for active time log
         $activeLog = TimeLog::where('user_id', $userId)
-            ->where('event_id', $eventId)
+            ->where('event_id', $event->id)
             ->whereNull('time_out')
             ->first();
         
@@ -66,7 +65,7 @@ class TimeLogController extends Controller
             // Create time log
             $timeLog = TimeLog::create([
                 'user_id' => $userId,
-                'event_id' => $eventId,
+                'event_id' => $event->id,
                 'user_latitude' => $request->latitude,
                 'user_longitude' => $request->longitude,
                 'is_within_radius' => $isWithinRadius,
@@ -107,14 +106,13 @@ class TimeLogController extends Controller
         }
     }
     
-    public function timeOut(Request $request, $eventId)
+    public function timeOut(Request $request, Event $event)
     {
         $request->validate([
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
         ]);
         
-        $event = Event::findOrFail($eventId);
         
         if (!$event->latitude || !$event->longitude) {
             return response()->json([
@@ -125,7 +123,7 @@ class TimeLogController extends Controller
         
         // Find active time log
         $timeLog = TimeLog::where('user_id', Auth::id())
-            ->where('event_id', $eventId)
+            ->where('event_id', $event->id)
             ->whereNull('time_out')
             ->firstOrFail();
         

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Event;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -10,9 +11,27 @@ class EventController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('Dashboard');
+        $events = Event::query()
+            ->orderBy('event_date')
+            ->orderBy('start_time')
+            ->when($request->search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                    $q->orWhere('address', 'like', "%{$search}%");
+                });
+            })
+            ->paginate(10)
+            ->withQueryString();
+
+
+        // return $events;
+
+        return Inertia::render('Admin/Event/Index', [
+            'events' => $events,
+            'filters' => $request->only('search'),
+        ]);
     }
 
     /**
@@ -20,7 +39,8 @@ class EventController extends Controller
      */
     public function create()
     {
-        //
+        
+        return Inertia::render('Admin/Event/Create');
     }
 
     /**
@@ -34,7 +54,7 @@ class EventController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Event $event)
     {
         //
     }
@@ -42,24 +62,45 @@ class EventController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Event $event)
     {
-        //
+        return $event;
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Event $event)
     {
-        //
+        $data = (object) $request->validate([
+
+        ]);
+
+
+        foreach($data as $col => $val)
+            $event->$col = $val;
+
+        $event->save();
+
+        Inertia::flash([
+            'header' => "Update success",
+            'message' => "You have successfully updated user $event->name"
+        ]);
+
+        return to_route('admin.event.edit',$event->id);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Event $event)
     {
-        //
+        $event->delete();
+        Inertia::flash([
+            'header' => "Delete success",
+            'message' => "You have successfully removed an event"
+        ]);
+
+        return to_route('admin.event.index');
     }
 }

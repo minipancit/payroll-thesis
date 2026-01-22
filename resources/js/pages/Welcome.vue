@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { dashboard, login, logout, timeIn, timeOut } from '@/routes';
-
+import {  login, logout, timeIn, timeOut } from '@/routes';
+import {
+    dashboard
+} from '@/routes/admin'
 interface Event {
     id: number;
     name: string;
@@ -120,7 +122,7 @@ const handleTimeIn = async (eventId: number) => {
     try {
         const position = await getCurrentLocation();
         
-        router.post(timeIn(), {
+        router.post(timeIn(eventId), {
             event_id: eventId,
             latitude: position.coords.latitude,
             longitude: position.coords.longitude
@@ -160,7 +162,7 @@ const handleTimeOut = async () => {
     try {
         const position = await getCurrentLocation();
         
-        router.post(timeOut(), {
+        router.post(timeOut(props.activeLog.event_id), {
             event_id: props.activeLog.event_id,
             latitude: position.coords.latitude,
             longitude: position.coords.longitude

@@ -14,7 +14,19 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/admin';
+import {
+    index as eventIndex
+} from '@/routes/admin/event'
+import {
+    index as dtrIndex
+} from '@/routes/admin/dtr'
+import {
+    index as payrollIndex
+} from '@/routes/admin/payroll'
+import {
+    index as userIndex
+} from '@/routes/admin/user'
 import { type NavItem } from '@/types';
 
 import AppLogo from './AppLogo.vue';
@@ -26,28 +38,23 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Reports',
-        href: dashboard(),
-        icon: ChartArea,
-    },
-    {
         title: 'Events',
-        href: dashboard(),
+        href: eventIndex(),
         icon: MapPin,
     },
     {
         title: 'DTR',
-        href: dashboard(),
+        href: dtrIndex(),
         icon: CalendarClock,
     },
     {
         title: 'Payroll',
-        href: dashboard(),
+        href: payrollIndex(),
         icon: HandCoins,
     },
     {
         title: 'Users',
-        href: dashboard(),
+        href: userIndex(),
         icon: Users2,
     },
 ];

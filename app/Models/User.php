@@ -8,10 +8,11 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Carbon\Carbon;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
 
     protected $fillable = [
         'name',
@@ -86,6 +87,10 @@ class User extends Authenticatable
         'grace_period_minutes' => 'integer',
     ];
 
+    protected $appends = [
+        'formatted_hire_date',
+
+    ];
     // Relationships
     public function timeLogs(): HasMany
     {
@@ -97,9 +102,13 @@ class User extends Authenticatable
         return $this->hasMany(DailyTimeRecord::class);
     }
 
-    public function payslips(): HasMany
-    {
-        return $this->hasMany(Payslip::class);
+    // public function payslips(): HasMany
+    // {
+    //     return $this->hasMany(Payslip::class);
+    // }
+
+    public function faceImages(): HasMany {
+        return $this->hasMany(UserFaceImage::class);
     }
 
     // Accessors for Inertia
@@ -142,6 +151,7 @@ class User extends Authenticatable
         return $this->hire_date ? Carbon::parse($this->hire_date)->diffInYears() : null;
     }
 
+
     // Permission check for Inertia - RENAMED FROM can() to hasPermission()
     public function hasPermission($permission): bool
     {
@@ -165,6 +175,11 @@ class User extends Authenticatable
     public function calculateOvertimeRate(): float
     {
         return round($this->calculateHourlyRate() * 1.25, 2);
+    }
+
+    public function getFormattedHireDateAttribute(): string
+    {
+        return Carbon::parse($this->hire_date)->format('F j, Y');
     }
 
     // For Inertia sharing
@@ -211,4 +226,6 @@ class User extends Authenticatable
     {
         return $query->where('department', $department);
     }
+
+    
 }
