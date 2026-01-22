@@ -54,10 +54,11 @@ class TimeLogController extends Controller
             ->first();
         
         if ($activeLog) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You already have an active time log for this event'
-            ], 400);
+            // return response()->json([
+            //     'success' => false,
+            //     'message' => 'You already have an active time log for this event'
+            // ], 400);
+            return to_route('home');
         }
         
         DB::beginTransaction();
@@ -95,14 +96,15 @@ class TimeLogController extends Controller
                 $response['message'] = 'You are not within the 50m radius. Time in recorded but may not be valid.';
             }
             
-            return response()->json($response);
+            return to_route('home');
             
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error recording time in: ' . $e->getMessage()
-            ], 500);
+            // return response()->json([
+            //     'success' => false,
+            //     'message' => 'Error recording time in: ' . $e->getMessage()
+            // ], 500);
+            return to_route('home');
         }
     }
     

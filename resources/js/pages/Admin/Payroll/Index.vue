@@ -115,7 +115,7 @@ watch(dateRange, (value) => {
         page-title="Process Payroll"
         >
         <template #action>
-            <Link class="text-sm underline link">
+            <Link class="text-sm underline">
                 Payroll Register
             </Link>
         </template>

@@ -468,7 +468,7 @@ const getLocationStatus = (event: Event) => {
                                 </div>
                                 <div class="text-right">
                                     <div class="text-4xl font-bold text-white mb-2">
-                                        {{ calculateDuration(props.activeLog!.time_in) }}
+                                        {{ props.activeLog?.time_in ? calculateDuration(props.activeLog!.time_in) : "---" }}
                                     </div>
                                     <div class="text-green-100">
                                         Active Duration
