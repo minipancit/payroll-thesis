@@ -75,7 +75,7 @@ watch(search, (value) => {
                 <Link :href="moduleRoute.create().url" as-child >
                     <Button variant="outline" size="sm">
                             <Plus />
-                            Create new Event
+                            Create new User
                     </Button>
                 </Link>
         </template>
