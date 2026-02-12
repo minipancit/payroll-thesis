@@ -48,11 +48,6 @@ const mainNavItems: NavItem[] = [
         icon: CalendarClock,
     },
     {
-        title: 'Payroll',
-        href: payrollIndex(),
-        icon: HandCoins,
-    },
-    {
         title: 'Users',
         href: userIndex(),
         icon: Users2,

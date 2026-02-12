@@ -3,7 +3,7 @@ import Button from '@/components/ui/button/Button.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     index,
-    store
+    update
 } from '@/routes/admin/user'
 import { type BreadcrumbItem } from '@/types';
 import { Form, Head, Link, router, useForm } from '@inertiajs/vue3';
@@ -77,7 +77,7 @@ const faceDetectionInterval = ref<NodeJS.Timeout | null>(null)
 const currentFaceBox = ref<{x: number, y: number, width: number, height: number} | null>(null)
 
 // Constants
-const REQUIRED_CAPTURES = 10 // Reduced for better UX
+const REQUIRED_CAPTURES = 2 // Reduced for better UX
 const TRAINING_INTERVAL = 1500 // 1.5 seconds between captures
 
 // Face detection (simplified version)
@@ -317,7 +317,7 @@ const trainFaceModel = async () => {
             }
             
             // Update form with new data
-            form.post(store().url, {
+            form.put(update(props.module.id).url, {
                 onSuccess: () => {
                     successState.value = true
                     setTimeout(() => {
@@ -344,7 +344,7 @@ const deleteFacialData = () => {
         captureCount.value = 0
         faceTrainingProgress.value = 0
         
-        form.post(store().url, {
+        form.put(update(props.module.id).url, {
             onSuccess: () => {
                 alert('Facial data deleted successfully.')
             }
@@ -422,7 +422,7 @@ const stopCamera = () => {
 const submit = () => {
     form.transform((data) => ({
         ...data,
-    })).post(store().url, {
+    })).put(update(props.module.id).url, {
         onSuccess: () => {
             successState.value = true
             setTimeout(() => {

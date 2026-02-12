@@ -8,14 +8,19 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Laravel\Sanctum\HasApiTokens;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
 
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
+        'middle_name',
         'email',
         'password',
         'employee_id',
@@ -52,6 +57,12 @@ class User extends Authenticatable
         'default_shift_start',
         'default_shift_end',
         'grace_period_minutes',
+        'face_data_hash',
+        'face_registered_at',
+        'face_updated_at',
+        'last_login_at',
+        'last_login_ip',
+        'last_login_location',
         'is_admin',
         'is_active',
     ];
@@ -59,12 +70,15 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_recovery_codes',
+        'two_factor_secret',
         'bank_account_number',
         'bank_routing_number',
         'tin',
         'sss',
         'philhealth',
         'pagibig',
+        'face_data_hash',
     ];
 
     protected $casts = [
@@ -73,8 +87,12 @@ class User extends Authenticatable
         'hire_date' => 'date',
         'birth_date' => 'date',
         'next_pay_date' => 'date',
-        'default_shift_start' => 'datetime',
-        'default_shift_end' => 'datetime',
+        'default_shift_start' => 'datetime:H:i',
+        'default_shift_end' => 'datetime:H:i',
+        'face_registered_at' => 'datetime',
+        'face_updated_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'last_login_location' => 'array',
         'basic_salary' => 'decimal:2',
         'daily_rate' => 'decimal:2',
         'hourly_rate' => 'decimal:2',
@@ -89,8 +107,15 @@ class User extends Authenticatable
 
     protected $appends = [
         'formatted_hire_date',
-
+        'role',
+        'permissions',
+        'formatted_salary',
+        'full_address',
+        'age',
+        'years_of_service',
+        'avatar_url',
     ];
+
     // Relationships
     public function timeLogs(): HasMany
     {
@@ -111,7 +136,12 @@ class User extends Authenticatable
         return $this->hasMany(UserFaceImage::class);
     }
 
-    // Accessors for Inertia
+    public function loginAttempts(): HasMany
+    {
+        return $this->hasMany(LoginAttempt::class);
+    }
+
+    // Accessors
     public function getRoleAttribute(): string
     {
         return $this->is_admin ? 'admin' : 'employee';
@@ -151,6 +181,68 @@ class User extends Authenticatable
         return $this->hire_date ? Carbon::parse($this->hire_date)->diffInYears() : null;
     }
 
+    public function getFormattedHireDateAttribute(): string
+    {
+        return $this->hire_date ? Carbon::parse($this->hire_date)->format('F j, Y') : '';
+    }
+
+    public function getAvatarUrlAttribute(): string
+    {
+        $hash = md5(strtolower(trim($this->email)));
+        return "https://www.gravatar.com/avatar/{$hash}?d=identicon";
+    }
+
+    // Face recognition methods
+    public function hasFaceRegistered(): bool
+    {
+        return !empty($this->face_data_hash);
+    }
+
+    public function registerFaceData(string $faceData): void
+    {
+        $this->update([
+            'face_data_hash' => hash('sha256', $faceData),
+            'face_registered_at' => now(),
+        ]);
+    }
+
+    public function updateFaceData(string $oldFaceData, string $newFaceData): bool
+    {
+        // Verify old face data first
+        if (hash('sha256', $oldFaceData) !== $this->face_data_hash) {
+            return false;
+        }
+
+        $this->update([
+            'face_data_hash' => hash('sha256', $newFaceData),
+            'face_updated_at' => now(),
+        ]);
+
+        return true;
+    }
+
+    public function verifyFaceData(string $faceData): bool
+    {
+        return hash('sha256', $faceData) === $this->face_data_hash;
+    }
+
+    public function removeFaceData(): void
+    {
+        $this->update([
+            'face_data_hash' => null,
+            'face_registered_at' => null,
+            'face_updated_at' => null,
+        ]);
+    }
+
+    public function recordLogin(string $ipAddress, array $location = null): void
+    {
+        $this->update([
+            'last_login_at' => now(),
+            'last_login_ip' => $ipAddress,
+            'last_login_location' => $location ? json_encode($location) : null,
+        ]);
+    }
 
     // Permission check for Inertia - RENAMED FROM can() to hasPermission()
     public function hasPermission($permission): bool
@@ -177,9 +269,34 @@ class User extends Authenticatable
         return round($this->calculateHourlyRate() * 1.25, 2);
     }
 
-    public function getFormattedHireDateAttribute(): string
+    // Token methods
+    public function createFaceRecognitionToken()
     {
-        return Carbon::parse($this->hire_date)->format('F j, Y');
+        return $this->createToken(
+            'face-recognition-token',
+            ['*'],
+            now()->addDays(30) // Token expires in 30 days
+        )->plainTextToken;
+    }
+
+    public function getValidTokens()
+    {
+        return $this->tokens()
+            ->where('expires_at', '>', now())
+            ->orWhereNull('expires_at')
+            ->get();
+    }
+
+    public function revokeAllTokens(): void
+    {
+        $this->tokens()->delete();
+    }
+
+    public function revokeOtherTokens($currentTokenId): void
+    {
+        $this->tokens()
+            ->where('id', '!=', $currentTokenId)
+            ->delete();
     }
 
     // For Inertia sharing
@@ -188,6 +305,8 @@ class User extends Authenticatable
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
             'email' => $this->email,
             'employee_id' => $this->employee_id,
             'department' => $this->department,
@@ -196,14 +315,9 @@ class User extends Authenticatable
             'permissions' => $this->permissions,
             'is_admin' => $this->is_admin,
             'is_active' => $this->is_active,
-            'avatar' => $this->getAvatarUrl(),
+            'avatar_url' => $this->avatar_url,
+            'has_face_registered' => $this->hasFaceRegistered(),
         ];
-    }
-
-    protected function getAvatarUrl(): string
-    {
-        $hash = md5(strtolower(trim($this->email)));
-        return "https://www.gravatar.com/avatar/{$hash}?d=identicon";
     }
 
     // Scopes
@@ -227,5 +341,110 @@ class User extends Authenticatable
         return $query->where('department', $department);
     }
 
-    
+    public function scopeHasFaceRegistered($query)
+    {
+        return $query->whereNotNull('face_data_hash');
+    }
+
+    public function scopeNoFaceRegistered($query)
+    {
+        return $query->whereNull('face_data_hash');
+    }
+
+    // Static methods for face recognition
+    public static function findByFaceData(string $faceData)
+    {
+        $faceHash = hash('sha256', $faceData);
+        
+        return static::where('face_data_hash', $faceHash)
+            ->where('is_active', true)
+            ->first();
+    }
+
+    // Business logic methods
+    public function isOnProbation(): bool
+    {
+        return $this->employee_type === 'probationary' && 
+               $this->hire_date && 
+               Carbon::parse($this->hire_date)->diffInMonths() < 6;
+    }
+
+    public function getLeaveBalance(string $type): int
+    {
+        return match($type) {
+            'sick' => $this->sick_leave_balance,
+            'vacation' => $this->vacation_leave_balance,
+            'emergency' => $this->emergency_leave_balance,
+            default => 0,
+        };
+    }
+
+    public function deductLeave(string $type, int $days = 1): bool
+    {
+        $currentBalance = $this->getLeaveBalance($type);
+        
+        if ($currentBalance >= $days) {
+            $field = $type . '_leave_balance';
+            $this->$field = $currentBalance - $days;
+            $this->save();
+            return true;
+        }
+        
+        return false;
+    }
+
+    public function addLeave(string $type, int $days = 1): void
+    {
+        $field = $type . '_leave_balance';
+        $this->$field = ($this->$field ?? 0) + $days;
+        $this->save();
+    }
+
+    // Security methods
+    public function hasRecentFailedLoginAttempts(int $minutes = 15, int $maxAttempts = 5): bool
+    {
+        return $this->loginAttempts()
+            ->where('status', 'failed')
+            ->where('attempted_at', '>', now()->subMinutes($minutes))
+            ->count() >= $maxAttempts;
+    }
+
+    public function clearFailedLoginAttempts(): void
+    {
+        $this->loginAttempts()
+            ->where('status', 'failed')
+            ->delete();
+    }
+
+    public function faceEmbeddings(): HasMany
+    {
+        return $this->hasMany(UserFaceEmbedding::class);
+    }
+
+    public function primaryFaceEmbedding(): HasOne
+    {
+        return $this->hasOne(UserFaceEmbedding::class)->where('is_primary', true);
+    }
+
+    public function addFaceEmbedding(array $embedding, string|null $imagePath = null): UserFaceEmbedding
+    {
+        // Mark existing primary as non-primary
+        $this->faceEmbeddings()->where('is_primary', true)->update(['is_primary' => false]);
+        
+        return $this->faceEmbeddings()->create([
+            'embedding' => $embedding,
+            'image_path' => $imagePath,
+            'is_primary' => true,
+            'metadata' => [
+                'created_at' => now()->toISOString(),
+                'dimensions' => count($embedding),
+            ],
+        ]);
+    }
+
+    public function getFaceEmbedding(): ?array
+    {
+        $embedding = $this->primaryFaceEmbedding;
+        return $embedding ? $embedding->embedding : null;
+    }
 }

@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'name' => 'Hermogenes Sancio',
+                'first_name' => 'Hermogenes',
+                'last_name' => 'Sancio',
                 'password' => Hash::make('password'), 
                 'email_verified_at' => now(),
 
@@ -42,20 +44,7 @@ class DatabaseSeeder extends Seeder
                 'city' => 'Manila',
                 'country' => 'PH',
 
-                // Salary Information
-                'basic_salary' => 50000,
-                'daily_rate' => 800,
-                'pay_frequency' => 'semi-monthly',
 
-                // Leave Balances
-                'sick_leave_balance' => 15,
-                'vacation_leave_balance' => 15,
-                'emergency_leave_balance' => 5,
-
-                // Attendance Settings
-                'default_shift_start' => '08:00:00',
-                'default_shift_end' => '17:00:00',
-                'grace_period_minutes' => 15,
 
                 // Role & Status
                 'is_admin' => true,
@@ -68,6 +57,8 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'name' => 'Hermogenes Sancio',
+                'first_name' => 'Hermogenes',
+                'last_name' => 'Sancio',
                 'password' => Hash::make('password'), 
                 'email_verified_at' => now(),
 
@@ -86,20 +77,8 @@ class DatabaseSeeder extends Seeder
                 'city' => 'Manila',
                 'country' => 'PH',
 
-                // Salary Information
-                'basic_salary' => 50000,
-                'daily_rate' => 800,
-                'pay_frequency' => 'semi-monthly',
 
-                // Leave Balances
-                'sick_leave_balance' => 15,
-                'vacation_leave_balance' => 15,
-                'emergency_leave_balance' => 5,
 
-                // Attendance Settings
-                'default_shift_start' => '08:00:00',
-                'default_shift_end' => '17:00:00',
-                'grace_period_minutes' => 15,
 
                 // Role & Status
                 'is_admin' => true,
@@ -112,6 +91,8 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'name' => 'John Richmond Paguinto',
+                'first_name' => 'John Richmond',
+                'last_name' => 'Paguinto',
                 'password' => Hash::make('password'), // change in production
                 'email_verified_at' => now(),
 
@@ -132,28 +113,9 @@ class DatabaseSeeder extends Seeder
                 'city' => 'Quezon City',
                 'country' => 'PH',
 
-                // Government IDs (sample only)
-                'tin' => '123-456-789-000',
-                'sss' => '12-3456789-0',
-                'philhealth' => '12-345678901-2',
-                'pagibig' => '1234-5678-9012',
 
-                // Salary Information
-                'basic_salary' => 20000,
-                'daily_rate' => 800,
-                'hourly_rate' => 113.64,
-                'pay_frequency' => 'semi-monthly',
-                'next_pay_date' => now()->addDays(15),
 
-                // Leave Balances
-                'sick_leave_balance' => 10,
-                'vacation_leave_balance' => 10,
-                'emergency_leave_balance' => 3,
 
-                // Attendance Settings
-                'default_shift_start' => '08:00:00',
-                'default_shift_end' => '17:00:00',
-                'grace_period_minutes' => 15,
 
                 // Role & Status
                 'is_admin' => false,
@@ -166,6 +128,8 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'name' => 'Mark Gabriel Bulahan',
+                'first_name' => 'Mark Gabriel',
+                'last_name' => 'Bulahan',
                 'password' => Hash::make('password'), // change in production
                 'email_verified_at' => now(),
 
@@ -186,28 +150,6 @@ class DatabaseSeeder extends Seeder
                 'city' => 'Quezon City',
                 'country' => 'PH',
 
-                // Government IDs (sample only)
-                'tin' => '123-456-789-000',
-                'sss' => '12-3456789-0',
-                'philhealth' => '12-345678901-2',
-                'pagibig' => '1234-5678-9012',
-
-                // Salary Information
-                'basic_salary' => 20000,
-                'daily_rate' => 800,
-                'hourly_rate' => 113.64,
-                'pay_frequency' => 'semi-monthly',
-                'next_pay_date' => now()->addDays(15),
-
-                // Leave Balances
-                'sick_leave_balance' => 10,
-                'vacation_leave_balance' => 10,
-                'emergency_leave_balance' => 3,
-
-                // Attendance Settings
-                'default_shift_start' => '08:00:00',
-                'default_shift_end' => '17:00:00',
-                'grace_period_minutes' => 15,
 
                 // Role & Status
                 'is_admin' => false,
@@ -222,8 +164,8 @@ class DatabaseSeeder extends Seeder
                 'event_date' => "2026-01-21",
                 'start_time' => '23:00:00',
                 'end_time' => '23:59:00',
-                'latitude' => 14.5636541,
-                'longitude' => 121.0676173,
+                'lat' => 14.5636541,
+                'lng' => 121.0676173,
                 'description' => 'Smart Blits Event',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -234,8 +176,8 @@ class DatabaseSeeder extends Seeder
                 'event_date' => "2026-01-22",
                 'start_time' => '7:00:00',
                 'end_time' => '20:00:00',
-                'latitude' => 14.3890472,
-                'longitude' => 121.0251653,
+                'lat' => 14.3890472,
+                'lng' => 121.0251653,
                 'description' => 'Smart Blits Event',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -246,8 +188,8 @@ class DatabaseSeeder extends Seeder
                 'event_date' => "2026-01-23",
                 'start_time' => '7:00:00',
                 'end_time' => '20:00:00',
-                'latitude' => 14.4166831,
-                'longitude' => 121.041726,
+                'lat' => 14.4166831,
+                'lng' => 121.041726,
                 'description' => 'Smart Blits Event',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -258,8 +200,8 @@ class DatabaseSeeder extends Seeder
                 'event_date' => "2026-01-24",
                 'start_time' => '7:00:00',
                 'end_time' => '20:00:00',
-                'latitude' => 14.377574,
-                'longitude' => 121.0447665,
+                'lat' => 14.377574,
+                'lng' => 121.0447665,
                 'description' => 'Smart Blits Event',
                 'created_at' => now(),
                 'updated_at' => now(),

@@ -16,14 +16,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Textarea } from '@/components/ui/textarea';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
 import InputError from '@/components/InputError.vue';
+import MapPicker from '@/components/MapPicker.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Manage Category',
+        title: 'Manage Event',
         href: index().url,
     },
     {
-        title: 'Add Category',
+        title: 'Add Event',
         href: index().url,
     },
 ];
@@ -35,8 +36,15 @@ const handleState = () => {
 
 
 const form = useForm({
-    category_name : "",
-    category_image : null
+    name : "",
+    address: "",
+    event_date : "",
+    start_time : "",
+    end_time : "",
+    description : "",
+    event_image : null,
+    lat : 14.5995,
+    lng : 120.9842
 })
 
 
@@ -54,8 +62,8 @@ const submit = () => {
     <Head title="Add Product" />
 
     <AppLayout :breadcrumbs="breadcrumbs"
-        page-title="Add Product"
-        page-description="Quickly add new items to your store by entering product details such as name, description, price, category, and stock levels. Upload images, set variations (like size or color), and publish products to make them available for customers."
+        page-title="Add Event"
+        page-description=""
     >
         <template #action>
         </template>
@@ -67,23 +75,53 @@ const submit = () => {
                     <div>
                         <h3 class="text-xl font-semibold mb-5">Basic Information</h3>
                         <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
-                            <Label for="product_name">Category Name</Label>
-                            <Input id="product_name" v-model="form.category_name"  type="text" placeholder="Enter your category name here..." />
-                            <InputError :message="form.errors.category_name" />
+                            <Label for="product_name">Event Name</Label>
+                            <Input id="product_name" v-model="form.name"  type="text" placeholder="Enter your event name here..." />
+                            <InputError :message="form.errors.name" />
                         </div>
+                        <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
+                            <Label for="address">Address</Label>
+                            <Input id="address" v-model="form.address"  type="text" placeholder="Enter address here..." />
+                            <InputError :message="form.errors.address" />
+                        </div>
+                        <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
+                            <Label for="event_date">Event Date</Label>
+                            <Input id="event_date" v-model="form.event_date"  type="date" />
+                            <InputError :message="form.errors.event_date" />
+                        </div>
+                        <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
+                            <Label for="start_time">Start Time</Label>
+                            <Input id="start_time" v-model="form.start_time"  type="time" />
+                            <InputError :message="form.errors.start_time" />
+                        </div>
+                        <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
+                            <Label for="end_time">End Time</Label>
+                            <Input id="end_time" v-model="form.end_time"  type="time" />
+                            <InputError :message="form.errors.end_time" />
+                        </div>
+                        <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
+                            <Label for="description">Description</Label>
+                            <Textarea id="description" v-model.trim.lazy="form.description"/>
+                            <InputError :message="form.errors.description" />
+                        </div>
+
 
                         
                     </div>
 
                     <!-- RIGHT COLUMN -->
                     <div>
-                        <h3 class="text-xl font-semibold mb-5">Category Image</h3>
+                        <h3 class="text-xl font-semibold mb-5">Event Image</h3>
+                        <MapPicker
+                            v-model:lat="form.lat"
+                            v-model:lng="form.lng"
+                            />
                         <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
                             <Label for="picture">Picture</Label>
                             <Input id="picture"
-                                @change="e => form.category_image = e.target.files[0]" 
+                                @change="e => form.event_image = e.target.files[0]" 
                                 type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"/>
-                            <InputError :message="form.errors.category_image" />
+                            <InputError :message="form.errors.event_image" />
                         </div>
                         <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
                             <img :src="''" />

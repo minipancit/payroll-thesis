@@ -58,6 +58,9 @@ class UserController extends Controller
 
         $user = new User();
         $user->name = "$data->first_name $mi $data->last_name";
+        $user->first_name = $data->first_name;
+        $user->last_name = $data->last_name;
+        $user->middle_name = $data->middle_name;
         $user->email = $data->email;
         $user->phone = $data->phone;
         $user->password = Hash::make('password'); // Default password, should be changed later
@@ -95,13 +98,19 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $data = (object) $request->validate([
-
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'email' => "required|email|unique:users,email,{$user->id}",
+            'phone' => 'nullable|string|max:20',
         ]);
 
 
         foreach($data as $col => $val)
             $user->$col = $val;
 
+
+        $user->name = trim($data->first_name . ' ' . (strlen($data->middle_name) > 0 ? strtoupper($data->middle_name[0]) . '. ' : '') . $data->last_name); 
         $user->save();
 
         Inertia::flash([

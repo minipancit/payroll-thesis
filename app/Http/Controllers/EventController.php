@@ -48,7 +48,29 @@ class EventController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $data = (object) $request->validate([
+            'name' => 'required|string|max:255',
+            'address' => 'required|string',
+            'event_date' => 'required|date',
+            'start_time' => 'nullable|date_format:H:i',
+            'end_time' => 'nullable|date_format:H:i|after_or_equal:start_time',
+            'description' => 'nullable|string',
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
+        ]);
+
+        $event = new Event();
+        foreach($data as $col => $val)
+            $event->$col = $val;
+
+        $event->save();
+
+        Inertia::flash([
+            'header' => "Create success",
+            'message' => "You have successfully created event $event->name"
+        ]);
+
+        return to_route('admin.event.edit',$event->id);
     }
 
     /**

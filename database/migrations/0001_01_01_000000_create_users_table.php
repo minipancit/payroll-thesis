@@ -14,6 +14,9 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('first_name');
+            $table->string('last_name');
+            $table->string('middle_name')->nullable();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
@@ -37,34 +40,13 @@ return new class extends Migration
             $table->string('zip_code')->nullable();
             $table->string('country')->nullable();
             
-            // Bank Information
-            $table->string('bank_name')->nullable();
-            $table->string('bank_account_number')->nullable();
-            $table->string('bank_account_name')->nullable();
-            $table->string('bank_routing_number')->nullable();
             
-            // Government IDs (Philippines)
-            $table->string('tin')->nullable();
-            $table->string('sss')->nullable();
-            $table->string('philhealth')->nullable();
-            $table->string('pagibig')->nullable();
-            
-            // Salary Information
-            $table->decimal('basic_salary', 12, 2)->default(0);
-            $table->decimal('daily_rate', 10, 2)->nullable();
-            $table->decimal('hourly_rate', 10, 2)->nullable();
-            $table->string('pay_frequency')->default('semi-monthly');
-            $table->date('next_pay_date')->nullable();
-            
-            // Leave Information
-            $table->integer('sick_leave_balance')->default(0);
-            $table->integer('vacation_leave_balance')->default(0);
-            $table->integer('emergency_leave_balance')->default(0);
-            
-            // Attendance Settings
-            $table->time('default_shift_start')->nullable();
-            $table->time('default_shift_end')->nullable();
-            $table->integer('grace_period_minutes')->default(15);
+            $table->string('face_data_hash')->nullable()->unique();
+            $table->timestamp('face_registered_at')->nullable();
+            $table->timestamp('face_updated_at')->nullable();
+            $table->timestamp('last_login_at')->nullable();
+            $table->string('last_login_ip')->nullable();
+            $table->text('last_login_location')->nullable(); // JSON: {lat, lng}
             
             // Role - Just admin or regular user
             $table->boolean('is_admin')->default(false);
@@ -80,7 +62,6 @@ return new class extends Migration
             $table->index(['department', 'position']);
             $table->index('is_admin');
             $table->index('hire_date');
-            $table->index('next_pay_date');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

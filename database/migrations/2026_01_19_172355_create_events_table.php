@@ -15,15 +15,14 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('address');
-            $table->date('event_date'); // Date of the event
-            $table->time('start_time')->nullable(); // Event start time
-            $table->time('end_time')->nullable(); // Event end time
-            $table->decimal('latitude', 10, 8)->nullable();
-            $table->decimal('longitude', 11, 8)->nullable();
-            $table->text('description')->nullable(); // Optional description
+            $table->date('event_date');
+            $table->time('start_time')->nullable();
+            $table->time('end_time')->nullable(); 
+            $table->decimal('lat', 10, 8)->nullable();
+            $table->decimal('lng', 11, 8)->nullable();
+            $table->text('description')->nullable(); 
             $table->timestamps();
             
-            // Indexes for better query performance
             $table->index(['event_date', 'start_time']);
             $table->index(['event_date', 'end_time']);
         });
