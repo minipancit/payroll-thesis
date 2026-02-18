@@ -23,24 +23,23 @@ return new class extends Migration
             
             // Employee Information
             $table->string('employee_id')->unique()->nullable();
-            $table->string('employee_type')->default('regular'); // regular, probationary, contractual
-            $table->string('department')->nullable();
-            $table->string('position')->nullable();
+            $table->string('employee_type')->default('regular');
             $table->date('hire_date')->nullable();
             $table->date('birth_date')->nullable();
             $table->string('gender')->nullable();
             $table->string('marital_status')->nullable();
             $table->integer('dependents')->default(0);
             
-            // Contact Information
             $table->string('phone')->nullable();
             $table->text('address')->nullable();
             $table->string('city')->nullable();
             $table->string('state')->nullable();
             $table->string('zip_code')->nullable();
             $table->string('country')->nullable();
-            
-            
+
+            $table->json('facial_images')->nullable();
+            $table->timestamp('face_trained_at')->nullable();
+
             $table->string('face_data_hash')->nullable()->unique();
             $table->timestamp('face_registered_at')->nullable();
             $table->timestamp('face_updated_at')->nullable();
@@ -59,7 +58,6 @@ return new class extends Migration
             
             // Indexes
             $table->index(['employee_id', 'is_active']);
-            $table->index(['department', 'position']);
             $table->index('is_admin');
             $table->index('hire_date');
         });

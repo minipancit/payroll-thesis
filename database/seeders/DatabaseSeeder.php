@@ -31,8 +31,6 @@ class DatabaseSeeder extends Seeder
 
                 'employee_id' => 'ADMIN-001',
                 'employee_type' => 'regular',
-                'department' => 'IT',
-                'position' => 'Administrator',
                 'hire_date' => now()->subYears(1),
                 'gender' => 'Male',
                 'marital_status' => 'Single',
@@ -64,8 +62,6 @@ class DatabaseSeeder extends Seeder
 
                 'employee_id' => 'ADMIN-002',
                 'employee_type' => 'regular',
-                'department' => 'IT',
-                'position' => 'Administrator',
                 'hire_date' => now()->subYears(1),
                 'gender' => 'Male',
                 'marital_status' => 'Single',
@@ -99,8 +95,6 @@ class DatabaseSeeder extends Seeder
                 // Employee Information
                 'employee_id' => 'EMP-001',
                 'employee_type' => 'regular',
-                'department' => 'Operations',
-                'position' => 'Staff',
                 'hire_date' => now()->subMonths(6),
                 'birth_date' => '1995-05-10',
                 'gender' => 'Female',
@@ -136,8 +130,6 @@ class DatabaseSeeder extends Seeder
                 // Employee Information
                 'employee_id' => 'EMP-002',
                 'employee_type' => 'regular',
-                'department' => 'Operations',
-                'position' => 'Staff',
                 'hire_date' => now()->subMonths(6),
                 'birth_date' => '1995-05-10',
                 'gender' => 'Female',

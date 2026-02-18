@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Models\LoginAttempt;
+use App\Models\UserFaceEmbedding;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
@@ -633,5 +634,296 @@ class FaceRecognitionController extends Controller
         // 2. Send SMS alert to user
         // 3. Log to security monitoring system
         // 4. Trigger other security protocols
+    }
+
+    /**
+     * Get all users with their face embeddings for local device storage
+     * This is optimized for mobile apps to download and store locally
+     */
+    public function getAllUsersWithEmbeddings(Request $request)
+    {
+        try {
+            // Get only active users with face embeddings (any embeddings, not just primary)
+            $users = User::query()
+                ->where('is_active', true)
+                ->whereHas('faceEmbeddings') // Remove the is_primary filter
+                ->with(['faceEmbeddings' => function($query) {
+                    // Remove the is_primary filter to load ALL embeddings
+                    $query->orderBy('is_primary', 'desc') // Primary first, then others
+                          ->orderBy('created_at', 'desc');
+                }])
+                ->get(['id', 'name', 'email', 'employee_id', 'face_registered_at', 'updated_at']);
+
+            $userData = $users->map(function ($user) {
+                // Get ALL embeddings
+                $allEmbeddings = $user->faceEmbeddings;
+                
+                // Separate primary and additional
+                $primaryEmbedding = $allEmbeddings->where('is_primary', true)->first();
+                $otherEmbeddings = $allEmbeddings->where('is_primary', false)->values();
+                
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'employee_id' => $user->employee_id,
+                    'face_registered_at' => $user->face_registered_at,
+                    'updated_at' => $user->updated_at,
+                    'face_embeddings' => $allEmbeddings->map(function ($embedding) {
+                        return [
+                            'id' => $embedding->id,
+                            'vector' => $embedding->embedding,
+                            'dimensions' => count($embedding->embedding ?? []),
+                            'is_primary' => (bool) $embedding->is_primary,
+                            'created_at' => $embedding->created_at,
+                            'metadata' => $this->sanitizeMetadata($embedding->metadata),
+                        ];
+                    })->values(),
+                    'total_embeddings' => $allEmbeddings->count(),
+                ];
+            });
+
+            // Calculate sync metadata
+            $totalEmbeddings = $userData->sum('total_embeddings');
+            
+            $syncMetadata = [
+                'total_users' => $userData->count(),
+                'total_embeddings' => $totalEmbeddings,
+                'last_sync' => now()->toISOString(),
+                'sync_id' => uniqid('sync_', true),
+                'data_hash' => md5(json_encode($userData)),
+                'app_version' => $request->get('app_version', '1.0.0'),
+                'requires_full_sync' => $request->get('since') ? false : true,
+            ];
+
+            // If client provides last sync timestamp, return only changed records
+            if ($request->has('since')) {
+                $since = $request->get('since');
+                $userData = $userData->filter(function ($user) use ($since) {
+                    // Check if user was updated
+                    if ($user['updated_at'] > $since) {
+                        return true;
+                    }
+                    
+                    // Check if primary embedding was updated
+                    if ($user['primary_face_embedding'] && 
+                        ($user['primary_face_embedding']['created_at'] ?? '') > $since) {
+                        return true;
+                    }
+                    
+                    // Check if any additional embedding was updated
+                    foreach ($user['additional_face_embeddings'] as $embedding) {
+                        if ($embedding['created_at'] > $since) {
+                            return true;
+                        }
+                    }
+                    
+                    return false;
+                })->values();
+                
+                $syncMetadata['total_new_users'] = $userData->count();
+                $syncMetadata['total_new_embeddings'] = $userData->sum('total_embeddings');
+                $syncMetadata['sync_type'] = 'incremental';
+            } else {
+                $syncMetadata['sync_type'] = 'full';
+            }
+
+            // Log sync for monitoring
+            Log::info('Face embeddings synced to mobile', [
+                'user_count' => $userData->count(),
+                'embedding_count' => $totalEmbeddings,
+                'sync_type' => $syncMetadata['sync_type'],
+                'app_version' => $syncMetadata['app_version'],
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Users and face embeddings retrieved successfully',
+                'data' => [
+                    'users' => $userData,
+                    'sync_metadata' => $syncMetadata,
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve users with embeddings: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve user embeddings',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    /**
+     * Get face embeddings for multiple users in a compact format
+     * Optimized for mobile storage and fast retrieval
+     */
+    public function getCompactEmbeddings(Request $request)
+    {
+        try {
+            // Validate user IDs
+            $userIds = $request->get('user_ids', []);
+            
+            $query = UserFaceEmbedding::query()
+                ->where('is_primary', true)
+                ->whereHas('user', function($q) {
+                    $q->where('is_active', true);
+                });
+            
+            if (!empty($userIds)) {
+                $query->whereIn('user_id', $userIds);
+            }
+            
+            $embeddings = $query->with('user:id,name,email,employee_id')
+                ->get();
+
+            // Compact format for mobile
+            $compactData = [
+                'v' => '1.0', // Version
+                't' => now()->timestamp, // Timestamp
+                'e' => [], // Embeddings array
+            ];
+
+            foreach ($embeddings as $embedding) {
+                $compactData['e'][] = [
+                    'u' => $embedding->user_id,
+                    'n' => $embedding->user->name,
+                    'e' => $embedding->user->employee_id,
+                    'v' => $embedding->embedding, // Vector
+                    'd' => count($embedding->embedding ?? []), // Dimensions
+                    'c' => $embedding->created_at->timestamp, // Created at
+                ];
+            }
+
+            // Compress response for mobile
+            $response = [
+                'success' => true,
+                'data' => $compactData,
+                'count' => count($embeddings),
+            ];
+
+            // Add compression header for large datasets
+            if (count($embeddings) > 100) {
+                return response()->json($response)
+                    ->header('Content-Encoding', 'gzip');
+            }
+
+            return response()->json($response, 200);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve compact embeddings: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve embeddings',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get face images for local training (optional)
+     */
+    public function getFaceImages(Request $request)
+    {
+        try {
+            $userIds = $request->get('user_ids', []);
+            
+            $embeddings = UserFaceEmbedding::query()
+                ->where('is_primary', true)
+                ->whereNotNull('image_path')
+                ->whereHas('user', function($q) {
+                    $q->where('is_active', true);
+                });
+            
+            if (!empty($userIds)) {
+                $embeddings->whereIn('user_id', $userIds);
+            }
+            
+            $images = $embeddings->limit(50)->get()->map(function ($embedding) {
+                if (!$embedding->image_path) {
+                    return null;
+                }
+                
+                // Get base64 encoded image for mobile
+                $fullPath = Storage::disk('public')->path($embedding->image_path);
+                if (file_exists($fullPath)) {
+                    $imageData = file_get_contents($fullPath);
+                    return [
+                        'user_id' => $embedding->user_id,
+                        'image_data' => 'data:image/jpeg;base64,' . base64_encode($imageData),
+                        'is_primary' => $embedding->is_primary,
+                    ];
+                }
+                return null;
+            })->filter();
+
+            return response()->json([
+                'success' => true,
+                'data' => $images->values(),
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve face images: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve face images',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get sync status and metadata
+     */
+    public function getSyncStatus(Request $request)
+    {
+        try {
+            $stats = [
+                'total_users_with_face' => UserFaceEmbedding::distinct('user_id')
+                    ->whereHas('user', function($q) {
+                        $q->where('is_active', true);
+                    })
+                    ->count('user_id'),
+                'total_embeddings' => UserFaceEmbedding::where('is_primary', true)->count(),
+                'last_update' => UserFaceEmbedding::max('updated_at'),
+                'database_version' => '1.0',
+                'recommended_sync_interval' => 3600, // seconds
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $stats,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve sync status',
+            ], 500);
+        }
+    }
+
+    /**
+     * Sanitize metadata for API response
+     */
+    private function sanitizeMetadata(?array $metadata): array
+    {
+        if (!$metadata) {
+            return [];
+        }
+
+        // Remove sensitive or unnecessary data
+        unset(
+            $metadata['internal_notes'],
+            $metadata['debug_info'],
+            $metadata['training_data']
+        );
+
+        return $metadata;
     }
 }

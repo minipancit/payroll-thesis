@@ -14,12 +14,15 @@ return new class extends Migration
         Schema::create('user_face_images', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('image_url');
-            $table->integer('image_number')->default(1);
+            $table->string('image_path');
+            $table->boolean('is_primary')->default(false);
+            $table->integer('order')->default(0);
+            $table->json('metadata')->nullable();
             $table->timestamps();
-
-            $table->index(['user_id']);
-
+            
+            // Indexes for faster queries
+            $table->index(['user_id', 'is_primary']);
+            $table->index(['user_id', 'order']);
         });
     }
 

@@ -82,6 +82,8 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
+        'facial_images' => 'array',
+        'face_trained_at' => 'datetime',
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'hire_date' => 'date',
@@ -446,5 +448,16 @@ class User extends Authenticatable
     {
         $embedding = $this->primaryFaceEmbedding;
         return $embedding ? $embedding->embedding : null;
+    }
+
+
+    public function scopeWithFaceEmbeddings($query)
+    {
+        return $query->whereHas('faceEmbeddings');
+    }
+
+    public function scopeWithoutFaceEmbeddings($query)
+    {
+        return $query->whereDoesntHave('faceEmbeddings');
     }
 }

@@ -86,11 +86,6 @@ const submit = () => {
                             <InputError :message="form.errors.middle_name" />
                         </div>
                         <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
-                            <Label for="product_name">Middle Name</Label>
-                            <Input id="product_name" v-model="form.middle_name"  type="text" placeholder="Enter your middle name here..." />
-                            <InputError :message="form.errors.middle_name" />
-                        </div> 
-                        <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
                             <Label for="product_name">Email Address</Label>
                             <Input id="product_name" v-model="form.email"  type="email" placeholder="Enter your email address here..." />
                             <InputError :message="form.errors.email" /> 
