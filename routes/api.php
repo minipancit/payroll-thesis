@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\FaceRecognitionController;
+use App\Http\Controllers\EventController;
 use App\Http\Controllers\FaceVerifyController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -17,7 +18,9 @@ Route::prefix('face-auth')->group(function () {
     });
 });
 
-Route::post('/verify-face/{user:email}', FaceVerifyController::class);
+Route::get('/mobile/events', [EventController::class, 'api']);
+
+Route::post('/verify-face', FaceVerifyController::class);
 
 Route::get('/mobile/users-with-embeddings', [FaceRecognitionController::class, 'getAllUsersWithEmbeddings']);
 
