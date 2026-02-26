@@ -237,7 +237,7 @@ class User extends Authenticatable
         ]);
     }
 
-    public function recordLogin(string $ipAddress, array $location = null): void
+    public function recordLogin(string $ipAddress, array|null $location = null): void
     {
         $this->update([
             'last_login_at' => now(),

@@ -7,7 +7,7 @@ import {
 } from '@/routes/admin/event'
 import { type BreadcrumbItem } from '@/types';
 import { Form, Head, Link, router, useForm } from '@inertiajs/vue3';
-import { Check, Plus, InfoIcon, Layers, Layers2 } from 'lucide-vue-next';
+import { Check, Plus, InfoIcon, Layers, Layers2, CalendarIcon } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
 import InputError from '@/components/InputError.vue';
 import MapPicker from '@/components/MapPicker.vue';
+import Calendar from '@/components/ui/calendar/Calendar.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -59,7 +60,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Add Product" />
+    <Head title="Add Event" />
 
     <AppLayout :breadcrumbs="breadcrumbs"
         page-title="Add Event"
@@ -138,8 +139,8 @@ const submit = () => {
                         @click="submit"
                     >
                         <Spinner v-if="form.processing" />
-                        <Layers2 v-else />
-                        Create Category
+                        <CalendarIcon v-else />
+                        Create Event
                     </Button>
                     <div 
                         v-show="successState">

@@ -15,3 +15,19 @@ export interface Paginate {
     to?: string|null;
     total : number; 
 }
+
+
+export interface Event {
+    id?: number;
+    name: string;
+    address?: string;
+    event_date?: string;
+    start_time?: string;
+    end_time?: string;
+    description?: string;
+    lat?: number;
+    lng?: number;
+    event_image?: string;
+    created_at?: string;
+    updated_at?: string;
+}

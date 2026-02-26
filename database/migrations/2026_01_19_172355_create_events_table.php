@@ -27,7 +27,6 @@ return new class extends Migration
             $table->index(['event_date', 'end_time']);
         });
     }
-
     /**
      * Reverse the migrations.
      */

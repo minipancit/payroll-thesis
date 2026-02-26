@@ -6,8 +6,8 @@ import Button from "./ui/button/Button.vue";
 
 // Props (optional starting location)
 const props = defineProps({
-  initialLat: { type: Number, default: 14.5995 },
-  initialLng: { type: Number, default: 120.9842 },
+  lat: { type: Number, default: 14.5995 },
+  lng: { type: Number, default: 120.9842 },
 });
 
 // Emits
@@ -18,8 +18,8 @@ const emit = defineEmits<{
 
 // Map refs
 const mapRef = ref<HTMLDivElement | null>(null);
-const lat = ref(props.initialLat);
-const lng = ref(props.initialLng);
+const lat = ref(props.lat);
+const lng = ref(props.lng);
 
 let map: L.Map;
 let marker: L.Marker;

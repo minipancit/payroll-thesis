@@ -49,7 +49,7 @@ class EventController extends Controller
     public function store(Request $request)
     {
         $data = (object) $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:events,name',
             'address' => 'required|string',
             'event_date' => 'required|date',
             'start_time' => 'nullable|date_format:H:i',
@@ -86,7 +86,9 @@ class EventController extends Controller
      */
     public function edit(Event $event)
     {
-        return $event;
+        return Inertia::render('Admin/Event/Edit', [
+            'event' => $event
+        ]);
     }
 
     /**
@@ -95,18 +97,24 @@ class EventController extends Controller
     public function update(Request $request, Event $event)
     {
         $data = (object) $request->validate([
-
+            'name' => 'required|string|max:255|unique:events,name,'.$event->id,
+            'address' => 'required|string',
+            'event_date' => 'required|date',
+            'start_time' => 'nullable|date_format:H:i',
+            'end_time' => 'nullable|date_format:H:i|after_or_equal:start_time',
+            'description' => 'nullable|string',
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
         ]);
-
-
-        foreach($data as $col => $val)
+        foreach($data as $col => $val){
             $event->$col = $val;
+        }
 
         $event->save();
 
         Inertia::flash([
             'header' => "Update success",
-            'message' => "You have successfully updated user $event->name"
+            'message' => "You have successfully updated event $event->name"
         ]);
 
         return to_route('admin.event.edit',$event->id);

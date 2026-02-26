@@ -3,11 +3,11 @@ import Button from '@/components/ui/button/Button.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     index,
-    store
+    update
 } from '@/routes/admin/event'
 import { type BreadcrumbItem } from '@/types';
-import { Form, Head, Link, router, useForm } from '@inertiajs/vue3';
-import { Check, Plus, InfoIcon, Layers, Layers2 } from 'lucide-vue-next';
+import { Form, Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { Check, Plus, InfoIcon, Layers, Layers2, CalendarIcon } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,14 +16,16 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Textarea } from '@/components/ui/textarea';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
 import InputError from '@/components/InputError.vue';
-
+import MapPicker from '@/components/MapPicker.vue';
+import Calendar from '@/components/ui/calendar/Calendar.vue';
+import { Event as EventInterface } from '@/types/payroll';
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Manage Category',
+        title: 'Manage Event',
         href: index().url,
     },
     {
-        title: 'Add Category',
+        title: 'Add Event',
         href: index().url,
     },
 ];
@@ -33,10 +35,22 @@ const handleState = () => {
     successState.value = true
 }
 
+const props = defineProps<{
+    event: EventInterface
+}>()
+
 
 const form = useForm({
-    category_name : "",
-    category_image : null
+    id : props.event?.id,
+    name : props.event?.name,
+    address: props.event?.address,
+    event_date : props.event?.event_date,
+    start_time: props.event?.start_time?.slice(0, 5),
+    end_time: props.event?.end_time?.slice(0, 5),
+    description : props.event?.description,
+    event_image : null,
+    lat : props.event?.lat,
+    lng : props.event?.lng
 })
 
 
@@ -44,18 +58,18 @@ const form = useForm({
 const submit = () => {
     form.transform((data)=> ({
         ...data,
-    })).post(store().url,{
+    })).put(update(props.event?.id).url,{
 
     })
 }
 </script>
 
 <template>
-    <Head title="Add Product" />
+    <Head title="Edit Event" />
 
     <AppLayout :breadcrumbs="breadcrumbs"
-        page-title="Add Product"
-        page-description="Quickly add new items to your store by entering product details such as name, description, price, category, and stock levels. Upload images, set variations (like size or color), and publish products to make them available for customers."
+        page-title="Edit Event"
+        page-description=""
     >
         <template #action>
         </template>
@@ -67,23 +81,53 @@ const submit = () => {
                     <div>
                         <h3 class="text-xl font-semibold mb-5">Basic Information</h3>
                         <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
-                            <Label for="product_name">Category Name</Label>
-                            <Input id="product_name" v-model="form.category_name"  type="text" placeholder="Enter your category name here..." />
-                            <InputError :message="form.errors.category_name" />
+                            <Label for="product_name">Event Name</Label>
+                            <Input id="product_name" v-model="form.name"  type="text" placeholder="Enter your event name here..." />
+                            <InputError :message="form.errors.name" />
                         </div>
+                        <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
+                            <Label for="address">Address</Label>
+                            <Input id="address" v-model="form.address"  type="text" placeholder="Enter address here..." />
+                            <InputError :message="form.errors.address" />
+                        </div>
+                        <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
+                            <Label for="event_date">Event Date</Label>
+                            <Input id="event_date" v-model="form.event_date"  type="date" />
+                            <InputError :message="form.errors.event_date" />
+                        </div>
+                        <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
+                            <Label for="start_time">Start Time</Label>
+                            <Input id="start_time" v-model="form.start_time"  type="time" />
+                            <InputError :message="form.errors.start_time" />
+                        </div>
+                        <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
+                            <Label for="end_time">End Time</Label>
+                            <Input id="end_time" v-model="form.end_time"  type="time" />
+                            <InputError :message="form.errors.end_time" />
+                        </div>
+                        <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
+                            <Label for="description">Description</Label>
+                            <Textarea id="description" v-model.trim.lazy="form.description"/>
+                            <InputError :message="form.errors.description" />
+                        </div>
+
 
                         
                     </div>
 
                     <!-- RIGHT COLUMN -->
                     <div>
-                        <h3 class="text-xl font-semibold mb-5">Category Image</h3>
+                        <h3 class="text-xl font-semibold mb-5">Event Image</h3>
+                        <MapPicker
+                            v-model:lat="form.lat"
+                            v-model:lng="form.lng"
+                            />
                         <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
                             <Label for="picture">Picture</Label>
                             <Input id="picture"
-                                @change="e => form.category_image = e.target.files[0]" 
+                                @change="e => form.event_image = e.target.files[0]" 
                                 type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"/>
-                            <InputError :message="form.errors.category_image" />
+                            <InputError :message="form.errors.event_image" />
                         </div>
                         <div class="grid w-full max-w-lg items-center gap-1.5 pb-3">
                             <img :src="''" />
@@ -100,15 +144,15 @@ const submit = () => {
                         @click="submit"
                     >
                         <Spinner v-if="form.processing" />
-                        <Layers2 v-else />
-                        Create Category
+                        <CalendarIcon v-else />
+                        Update Event
                     </Button>
                     <div 
-                        v-show="successState">
+                        v-show="usePage().flash.message">
                         <p
                             class="text-md text-green-600"
                         >
-                            Saved. 
+                            {{ usePage().flash.message }}
                         </p>
                     </div>
                 </div>
