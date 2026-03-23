@@ -178,31 +178,62 @@ class FaceVerifyController extends Controller
             $threshold = 75; // Confidence threshold
             
             if ($highestConfidence >= $threshold) {
-                // Update user's last login info
+                $location = $request->input('location', []);
+
+                $latitude = isset($location['latitude']) ? (float) $location['latitude'] : null;
+                $longitude = isset($location['longitude']) ? (float) $location['longitude'] : null;
+
+                $deviceInfo = [
+                    'platform' => $request->header('X-Platform'),
+                    'app_version' => $request->header('X-App-Version'),
+                    'device_name' => $request->header('X-Device-Name'),
+                    'user_agent' => $request->userAgent(),
+                ];
+
                 $user->last_login_at = now();
                 $user->last_login_ip = $request->ip();
-                
-                if ($request->has('location')) {
-                    $user->last_login_location = json_encode($request->location);
-                }
-                
+                $user->last_login_location = !empty($location) ? $location : null;
                 $user->save();
-                
+
+                $user->loginAttempts()->create([
+                    'status' => 'success',
+                    'failure_reason' => null,
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
+                    'device_info' => $deviceInfo,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'confidence_score' => $highestConfidence,
+                    'attempted_at' => now(),
+                    'authenticated_at' => now(),
+                ]);
+
+                $token = $user->createToken('mobile')->plainTextToken;
+                $user->recordSuccessfulFaceVerify(
+                    confidenceScore: $highestConfidence,
+                    latitude: $latitude,
+                    longitude: $longitude,
+                    deviceInfo: $deviceInfo,
+                    ipAddress: $request->ip(),
+                    userAgent: $request->userAgent(),
+                );
                 return response()->json([
                     'success' => true,
                     'message' => 'Face verified successfully',
                     'confidence' => $highestConfidence,
                     'threshold' => $threshold,
+                    'token' => $token,
                     'user' => [
                         'id' => $user->id,
                         'name' => $user->name,
                         'first_name' => $user->first_name,
                         'last_name' => $user->last_name,
                         'email' => $user->email,
-                        'employee_id' => $user->employee_id
+                        'employee_id' => $user->employee_id,
                     ]
                 ]);
-            } else {
+            }
+            else {
                 return response()->json([
                     'success' => false,
                     'message' => 'Face does not match. Confidence: ' . round($highestConfidence) . '% (required: ' . $threshold . '%)',

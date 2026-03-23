@@ -133,4 +133,12 @@ class EventController extends Controller
 
         return to_route('admin.event.index');
     }
+
+
+    public function api(){
+        // return now()->toDateString();
+        return Event::query()
+            ->whereBetween('event_date', [now()->toDateString(), now()->toDateString()])
+            ->first();
+    }
 }

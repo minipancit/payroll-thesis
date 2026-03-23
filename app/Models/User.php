@@ -155,7 +155,27 @@ class User extends Authenticatable
             ? ['*'] // Admin has all permissions
             : ['view_own_payslip', 'time_in_out', 'view_own_attendance', 'view_own_dtr'];
     }
-
+    public function recordSuccessfulFaceVerify(
+        ?float $confidenceScore = null,
+        ?float $latitude = null,
+        ?float $longitude = null,
+        ?array $deviceInfo = null,
+        ?string $ipAddress = null,
+        ?string $userAgent = null
+    ): void {
+        $this->loginAttempts()->create([
+            'status' => 'success',
+            'failure_reason' => null,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'device_info' => $deviceInfo,
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+            'confidence_score' => $confidenceScore,
+            'attempted_at' => now(),
+            'authenticated_at' => now(),
+        ]);
+    }
     public function getFormattedSalaryAttribute(): string
     {
         return '₱' . number_format($this->basic_salary, 2);
@@ -245,7 +265,6 @@ class User extends Authenticatable
             'last_login_location' => $location ? json_encode($location) : null,
         ]);
     }
-
     // Permission check for Inertia - RENAMED FROM can() to hasPermission()
     public function hasPermission($permission): bool
     {
@@ -459,5 +478,10 @@ class User extends Authenticatable
     public function scopeWithoutFaceEmbeddings($query)
     {
         return $query->whereDoesntHave('faceEmbeddings');
+    }
+
+    public function locations()
+    {
+        return $this->hasMany(UserLocation::class);
     }
 }

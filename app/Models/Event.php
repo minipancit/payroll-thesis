@@ -193,14 +193,25 @@ class Event extends Model
     public function getIsActiveAttribute()
     {
         $now = Carbon::now();
-        $today = Carbon::today();
         $eventDate = Carbon::parse($this->event_date);
-        $startTime = Carbon::parse($this->start_time);
-        $endTime = $this->end_time ? Carbon::parse($this->end_time) : null;
 
-        return $eventDate->isSameDay($today) && 
-               $now->greaterThanOrEqualTo($startTime) && 
-               (!$endTime || $now->lessThanOrEqualTo($endTime));
+        $startDateTime = $eventDate->copy()->setTimeFromTimeString($this->start_time);
+
+        $endDateTime = null;
+        if ($this->end_time) {
+            $endDateTime = $eventDate->copy()->setTimeFromTimeString($this->end_time);
+
+            if ($endDateTime->lt($startDateTime)) {
+                $endDateTime->addDay();
+            }
+        }
+
+        $allowedStart = $startDateTime->copy()->subHours(3);
+        $allowedEnd = $endDateTime
+            ? $endDateTime->copy()->addHours(3)
+            : $startDateTime->copy()->addHours(3);
+
+        return $now->betweenIncluded($allowedStart, $allowedEnd);
     }
 
     /**
