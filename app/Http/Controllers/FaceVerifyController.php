@@ -149,21 +149,25 @@ class FaceVerifyController extends Controller
                 if ($compareResponse->successful()) {
                     $successfulComparisons++;
                     $compareData = $compareResponse->json();
-                    $confidence = $compareData['confidence'] ?? 0;
-                    
-                    Log::info("Comparison with image " . ($index + 1) . ": confidence = " . $confidence);
-                    
+                    $confidence = (float) ($compareData['confidence'] ?? 0);
+
+                    Log::info('Face++ compare success', [
+                        'image_index' => $index + 1,
+                        'confidence' => $confidence,
+                        'response' => $compareData,
+                    ]);
+
                     if ($confidence > $highestConfidence) {
                         $highestConfidence = $confidence;
                     }
                 } else {
-                    $errorData = $compareResponse->json();
-                    Log::warning('Face++ compare failed for image ' . ($index + 1) . ': ' . ($errorData['error_message'] ?? 'Unknown error'));
-                    
-                    // Log the full error for debugging
-                    Log::debug('Compare error details:', [
+                    Log::warning('Face++ compare failed', [
+                        'image_index' => $index + 1,
                         'status' => $compareResponse->status(),
-                        'body' => $errorData
+                        'raw_body' => $compareResponse->body(),
+                        'json_body' => $compareResponse->json(),
+                        'stored_base64_length' => strlen($storedBase64),
+                        'submitted_base64_length' => strlen($submittedImageBase64),
                     ]);
                 }
             }
