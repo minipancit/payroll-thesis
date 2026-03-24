@@ -21,9 +21,6 @@ class FaceVerifyController extends Controller
 
         $user = User::where('email', $request->email)->first(); 
         
-
-        return $user->facial_images;
-
         try {
             
             if (!$user) {
