@@ -26,6 +26,14 @@ Route::post('/verify-face', FaceVerifyController::class);
 
 Route::post('/auth/login', [AuthController::class, 'loginWithFaceCode']);
 
+Route::get('/debug-auth', function (Request $request) {
+    return response()->json([
+        'accept' => $request->header('Accept'),
+        'authorization' => $request->header('Authorization'),
+        'bearer' => $request->bearerToken(),
+        'user' => $request->user(),
+    ]);
+});
 Route::middleware('auth:sanctum')->group(function(){
     Route::get('/auth/session', [AuthController::class, 'session']);
     Route::get('/auth/logout', [AuthController::class, 'logout']);
