@@ -9,6 +9,7 @@ class LoginAttempt extends Model
 {
     protected $fillable = [
         'user_id',
+        'event_id',
         'face_data_hash',
         'status',
         'failure_reason',
@@ -34,6 +35,11 @@ class LoginAttempt extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(Event::class);
     }
 
     public function scopeSuccessful($query)

@@ -143,6 +143,8 @@ class User extends Authenticatable
         return $this->hasMany(LoginAttempt::class);
     }
 
+
+
     // Accessors
     public function getRoleAttribute(): string
     {
@@ -156,6 +158,7 @@ class User extends Authenticatable
             : ['view_own_payslip', 'time_in_out', 'view_own_attendance', 'view_own_dtr'];
     }
     public function recordSuccessfulFaceVerify(
+        ?int $eventId = null,
         ?float $confidenceScore = null,
         ?float $latitude = null,
         ?float $longitude = null,
@@ -164,6 +167,7 @@ class User extends Authenticatable
         ?string $userAgent = null
     ): void {
         $this->loginAttempts()->create([
+            'event_id' => $eventId, 
             'status' => 'success',
             'failure_reason' => null,
             'latitude' => $latitude,

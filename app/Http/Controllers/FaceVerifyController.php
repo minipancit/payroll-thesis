@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Event;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -16,11 +17,12 @@ class FaceVerifyController extends Controller
     {
         $request->validate([
             'email' => 'required|email|exists:users,email',
+            'event_id' => 'required|exists:events,id',
             'face_image' => 'required|string',
         ]);
 
         $user = User::where('email', $request->email)->first(); 
-        
+        $event = Event::query()->where('id', $request->event_id)->first();
         try {
             
             if (!$user) {
@@ -29,7 +31,14 @@ class FaceVerifyController extends Controller
                     'message' => 'User not found'
                 ], 404);
             }
-            
+
+            if (!$event) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Event not found'
+                ], 404);
+            }
+
             // Check if user has facial images registered
             if (!$user->facial_images || count($user->facial_images) === 0) {
                 return response()->json([
@@ -38,7 +47,7 @@ class FaceVerifyController extends Controller
                 ], 400);
             }
             
-            Log::info('Processing face verification for user: ' . $user->email . ' with ' . count($user->facial_images) . ' stored images');
+            // Log::info('Processing face verification for user: ' . $user->email . ' with ' . count($user->facial_images) . ' stored images');
             
             // Your Face++ API credentials
             $apiKey = env('FACE_PLUS_PLUS_API_KEY');
@@ -124,6 +133,10 @@ class FaceVerifyController extends Controller
                 }
                 $storedBase64 = preg_replace('/\s+/', '', $storedBase64);
                 
+                Log::info('Comparing submitted image with stored image #' . ($index + 1));
+                Log::info('Submitted image size: ' . strlen($submittedImageBase64) . ' characters');
+                Log::info('Stored image size: ' . strlen($storedBase64) . ' characters');
+                
                 // FIXED: Properly format multipart data for compare API
                 $compareResponse = Http::timeout(30)
                     ->asMultipart()
@@ -150,24 +163,19 @@ class FaceVerifyController extends Controller
                     $successfulComparisons++;
                     $compareData = $compareResponse->json();
                     $confidence = (float) ($compareData['confidence'] ?? 0);
-
-                    Log::info('Face++ compare success', [
-                        'image_index' => $index + 1,
+                    
+                    Log::info('Face comparison result for image #' . ($index + 1), [
                         'confidence' => $confidence,
-                        'response' => $compareData,
+                        'raw_response' => $compareData
                     ]);
-
+                    
                     if ($confidence > $highestConfidence) {
                         $highestConfidence = $confidence;
                     }
                 } else {
-                    Log::warning('Face++ compare failed', [
-                        'image_index' => $index + 1,
+                    Log::warning('Face++ compare failed for image #' . ($index + 1), [
                         'status' => $compareResponse->status(),
-                        'raw_body' => $compareResponse->body(),
-                        'json_body' => $compareResponse->json(),
-                        'stored_base64_length' => strlen($storedBase64),
-                        'submitted_base64_length' => strlen($submittedImageBase64),
+                        'error' => $compareResponse->json()
                     ]);
                 }
             }
@@ -200,6 +208,7 @@ class FaceVerifyController extends Controller
                 $user->save();
 
                 $user->loginAttempts()->create([
+                    'event_id' => $event->id,   
                     'status' => 'success',
                     'failure_reason' => null,
                     'latitude' => $latitude,
@@ -214,12 +223,14 @@ class FaceVerifyController extends Controller
 
                 $token = $user->createToken('mobile')->plainTextToken;
                 $user->recordSuccessfulFaceVerify(
+                    eventId: $event->id,
                     confidenceScore: $highestConfidence,
                     latitude: $latitude,
                     longitude: $longitude,
                     deviceInfo: $deviceInfo,
                     ipAddress: $request->ip(),
                     userAgent: $request->userAgent(),
+                    
                 );
                 return response()->json([
                     'success' => true,

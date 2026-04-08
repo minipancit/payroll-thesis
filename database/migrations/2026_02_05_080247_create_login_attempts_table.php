@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('login_attempts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('event_id')->nullable()->constrained()->onDelete('set null');
             $table->string('face_data_hash')->nullable();
             $table->string('status'); // pending, success, failed
             $table->string('failure_reason')->nullable();
