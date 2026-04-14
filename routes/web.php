@@ -42,6 +42,7 @@ Route::middleware([
 
 
             Route::get('/dtr',[DTRController::class,'index'])->name('dtr.index');
+            Route::get('/dtr/export',[DTRController::class,'export'])->name('dtr.export');
             Route::get('/payroll',[PayrollController::class,'index'])->name('payroll.index');
             Route::post('/payroll',[PayrollController::class,'proccess'])->name('payroll.process');
             Route::get('/payroll-register',[PayrollRegisterController::class,'index'])->name('payroll.payroll-register.index');

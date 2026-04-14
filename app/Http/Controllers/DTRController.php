@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\DtrExport;
 use App\Models\DailyTimeRecord;
 use App\Models\LoginAttempt;
 use App\Services\DTRService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DTRController extends Controller
 {
@@ -109,5 +111,15 @@ class DTRController extends Controller
     public function update(Request $request, DailyTimeRecord $dtr)
     {
         return $dtr;
+    }
+
+    public function export(Request $request)
+    {
+        $startDate = $request->query('start') ? Carbon::parse($request->query('start'))->toDateString() : today()->subDays(6)->toDateString();
+        $endDate = $request->query('end') ? Carbon::parse($request->query('end'))->toDateString() : today()->toDateString();
+
+        $filename = 'dtr_' . $startDate . '_to_' . $endDate . '.xlsx';
+
+        return Excel::download(new DtrExport($startDate, $endDate), $filename);
     }
 }
