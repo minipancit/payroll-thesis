@@ -49,6 +49,9 @@ const props = defineProps<{
         absence_count: number;
         completed_count: number;
         overtime_count: number;
+        total_late_hours: number;
+        total_undertime_hours: number;
+        total_overtime_hours: number;
     };
 }>();
 
@@ -113,21 +116,48 @@ watch(
             </a>
         </template>
         <template #content>
+            <!-- Summary Cards -->
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
+                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Total Hours</p>
+                    <p class="mt-2 text-3xl font-semibold">{{ props.summary.total_hours }}</p>
+                    <p class="text-xs text-muted-foreground">Completed work hours</p>
+                </div>
+                <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
+                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Absences</p>
+                    <p class="mt-2 text-3xl font-semibold">{{ props.summary.absence_count }}</p>
+                    <p class="text-xs text-muted-foreground">Days with no time-in</p>
+                </div>
+                <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
+                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Late Hours</p>
+                    <p class="mt-2 text-3xl font-semibold text-amber-600">{{ props.summary.total_late_hours }}</p>
+                    <p class="text-xs text-muted-foreground">Total late time (hours)</p>
+                </div>
+                <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
+                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Undertime Hours</p>
+                    <p class="mt-2 text-3xl font-semibold text-red-600">{{ props.summary.total_undertime_hours }}</p>
+                    <p class="text-xs text-muted-foreground">Total undertime (hours)</p>
+                </div>
+            </div>
+
+            <!-- Additional Summary Row -->
             <div class="grid gap-4 md:grid-cols-3">
+                <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
+                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Overtime Hours</p>
+                    <p class="mt-2 text-3xl font-semibold text-green-600">{{ props.summary.total_overtime_hours }}</p>
+                    <p class="text-xs text-muted-foreground">Total overtime (hours)</p>
+                </div>
                 <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
                     <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Records</p>
                     <p class="mt-2 text-3xl font-semibold">{{ props.summary.total_records }}</p>
+                    <p class="text-xs text-muted-foreground">Total DTR entries</p>
                 </div>
                 <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
-                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Hours completed</p>
-                    <p class="mt-2 text-3xl font-semibold">{{ props.summary.total_hours }}</p>
-                </div>
-                <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
-                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Late / Absent</p>
-                    <div class="mt-2 flex items-center gap-4">
-                        <span class="rounded-full bg-amber-500/10 px-3 py-1 text-sm text-amber-700">Late {{ props.summary.late_count }}</span>
-                        <span class="rounded-full bg-destructive/10 px-3 py-1 text-sm text-destructive">Absent {{ props.summary.absence_count }}</span>
-                    </div>
+                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Completion Rate</p>
+                    <p class="mt-2 text-3xl font-semibold">
+                        {{ props.summary.total_records > 0 ? Math.round((props.summary.completed_count / props.summary.total_records) * 100) : 0 }}%
+                    </p>
+                    <p class="text-xs text-muted-foreground">{{ props.summary.completed_count }} completed</p>
                 </div>
             </div>
 

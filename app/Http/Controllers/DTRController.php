@@ -74,6 +74,9 @@ class DTRController extends Controller
             'absence_count' => (clone $baseQuery)->whereNull('actual_time_in')->count(),
             'completed_count' => (clone $baseQuery)->completed()->count(),
             'overtime_count' => (clone $baseQuery)->withOvertime()->count(),
+            'total_late_hours' => round((clone $baseQuery)->sum('late_minutes') / 60, 2),
+            'total_undertime_hours' => round((clone $baseQuery)->sum('undertime_minutes') / 60, 2),
+            'total_overtime_hours' => round((clone $baseQuery)->sum('overtime_minutes') / 60, 2),
         ];
 
         return Inertia::render('Admin/DTR/Index', [
