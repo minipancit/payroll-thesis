@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DTRController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\HomeController;
@@ -37,9 +38,7 @@ Route::middleware([
         ->name('admin.')
         ->group(function(){
 
-            Route::get('dashboard', function () {
-                return Inertia::render('Dashboard');
-            })->name('dashboard');
+            Route::get('dashboard',[DashboardController::class,'index'])->name('dashboard');
 
 
             Route::get('/dtr',[DTRController::class,'index'])->name('dtr.index');
