@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DailyTimeRecord;
 use App\Models\Event;
+use App\Models\LoginAttempt;
 use App\Models\TimeLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -39,9 +40,19 @@ class DashboardController extends Controller
                 ];
             });
 
-        $activeTimeLogs = TimeLog::with(['user', 'event'])
-            ->whereNull('time_out')
-            ->latest('time_in')
+        $activeTimeLogs = LoginAttempt::with(['user', 'event'])
+            ->where('status', 'success')
+            ->whereDate('authenticated_at', Carbon::today())
+            ->whereNotExists(function ($query) {
+                $query->selectRaw(1)
+                    ->from('login_attempts as la2')
+                    ->whereColumn('la2.user_id', 'login_attempts.user_id')
+                    ->whereColumn('la2.event_id', 'login_attempts.event_id')
+                    ->whereDate('la2.authenticated_at', Carbon::today())
+                    ->where('la2.status', 'success')
+                    ->whereColumn('la2.authenticated_at', '>', 'login_attempts.authenticated_at');
+            })
+            ->latest('authenticated_at')
             ->take(6)
             ->get()
             ->map(function ($log) {
@@ -49,23 +60,44 @@ class DashboardController extends Controller
                     'id' => $log->id,
                     'user_name' => $log->user?->name,
                     'event_name' => $log->event?->name,
-                    'time_in' => optional($log->time_in)->format('H:i'),
+                    'time_in' => optional($log->authenticated_at)->format('H:i'),
                     'created_at' => optional($log->created_at)->format('Y-m-d H:i'),
                 ];
             });
 
-        $recentLogs = TimeLog::with(['user', 'event'])
-            ->latest('created_at')
+        $recentLogs = LoginAttempt::with(['user', 'event'])
+            ->where('status', 'success')
+            ->latest('authenticated_at')
             ->take(8)
             ->get()
             ->map(function ($log) {
+                // Determine if this is time in or time out based on position
+                $userAttemptsToday = LoginAttempt::where('user_id', $log->user_id)
+                    ->where('event_id', $log->event_id)
+                    ->where('status', 'success')
+                    ->whereDate('authenticated_at', $log->authenticated_at->toDateString())
+                    ->orderBy('authenticated_at')
+                    ->pluck('id');
+
+                $isFirst = $userAttemptsToday->first() === $log->id;
+                $isLast = $userAttemptsToday->last() === $log->id;
+
+                $type = 'Login';
+                if ($isFirst && $isLast) {
+                    $type = 'Login (Single)';
+                } elseif ($isFirst) {
+                    $type = 'Time In';
+                } elseif ($isLast) {
+                    $type = 'Time Out';
+                }
+
                 return [
                     'id' => $log->id,
                     'user_name' => $log->user?->name,
                     'event_name' => $log->event?->name,
-                    'type' => $log->time_out ? 'Time Out' : 'Time In',
-                    'time' => optional($log->time_out ?? $log->time_in)->format('H:i'),
-                    'date' => optional($log->created_at)->format('Y-m-d'),
+                    'type' => $type,
+                    'time' => optional($log->authenticated_at)->format('H:i'),
+                    'date' => optional($log->authenticated_at)->format('Y-m-d'),
                 ];
             });
 

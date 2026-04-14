@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Models\LoginAttempt;
 use App\Models\TimeLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -62,8 +63,18 @@ class HomeController extends Controller
                     ];
                 });
             
-            $activeLog = TimeLog::where('user_id', $user->id)
-                ->whereNull('time_out')
+            $activeLog = LoginAttempt::where('user_id', $user->id)
+                ->where('status', 'success')
+                ->whereDate('authenticated_at', Carbon::today())
+                ->whereNotExists(function ($query) {
+                    $query->selectRaw(1)
+                        ->from('login_attempts as la2')
+                        ->whereColumn('la2.user_id', 'login_attempts.user_id')
+                        ->whereColumn('la2.event_id', 'login_attempts.event_id')
+                        ->whereDate('la2.authenticated_at', Carbon::today())
+                        ->where('la2.status', 'success')
+                        ->whereColumn('la2.authenticated_at', '>', 'login_attempts.authenticated_at');
+                })
                 ->with('event')
                 ->first();
             

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DailyTimeRecord;
+use App\Models\LoginAttempt;
 use App\Models\TimeLog;
 use Carbon\Carbon;
 
@@ -13,16 +14,17 @@ class DTRService
     const OVERTIME_THRESHOLD_MINUTES = 30; // Minimum 30 mins for overtime
     const LATE_THRESHOLD_MINUTES = 15; // Grace period for late
     const LUNCH_BREAK_MINUTES = 60; // 1 hour lunch break
-    
+
     /**
-     * Process time log and update DTR
+     * Process login attempt and update DTR
+     * First successful login = Time In, Last successful login = Time Out
      */
-    public function processTimeLog(TimeLog $timeLog, bool $isTimeOut = false): DailyTimeRecord
+    public function processLoginAttempt(LoginAttempt $loginAttempt): DailyTimeRecord
     {
-        $userId = $timeLog->user_id;
-        $eventId = $timeLog->event_id;
-        $today = Carbon::today()->toDateString();
-        
+        $userId = $loginAttempt->user_id;
+        $eventId = $loginAttempt->event_id;
+        $today = Carbon::parse($loginAttempt->authenticated_at)->toDateString();
+
         // Get or create DTR for today
         $dtr = DailyTimeRecord::firstOrCreate(
             [
@@ -31,23 +33,148 @@ class DTRService
                 'log_date' => $today,
             ]
         );
-        
+
+        // Get all successful login attempts for this user/event today
+        $todayLoginAttempts = LoginAttempt::where('user_id', $userId)
+            ->where('event_id', $eventId)
+            ->where('status', 'success')
+            ->whereDate('authenticated_at', $today)
+            ->orderBy('authenticated_at')
+            ->get();
+
+        if ($todayLoginAttempts->isEmpty()) {
+            return $dtr;
+        }
+
+        // First login attempt = Time In
+        $firstLogin = $todayLoginAttempts->first();
+        $dtr->actual_time_in = Carbon::parse($firstLogin->authenticated_at)->format('H:i:s');
+
+        // Calculate late minutes if scheduled time is set
+        if ($dtr->scheduled_time_in) {
+            $scheduledTime = Carbon::parse($dtr->scheduled_time_in);
+            $actualTime = Carbon::parse($firstLogin->authenticated_at);
+
+            $lateMinutes = max(0, $actualTime->diffInMinutes($scheduledTime, false));
+            if ($lateMinutes > self::LATE_THRESHOLD_MINUTES) {
+                $dtr->late_minutes = $lateMinutes - self::LATE_THRESHOLD_MINUTES;
+            }
+        }
+
+        // Last login attempt = Time Out (if there are multiple)
+        if ($todayLoginAttempts->count() > 1) {
+            $lastLogin = $todayLoginAttempts->last();
+            $dtr->actual_time_out = Carbon::parse($lastLogin->authenticated_at)->format('H:i:s');
+
+            // Calculate total hours and overtime
+            $this->calculateHoursAndOvertime($dtr);
+        }
+
+        // Update login attempt count
+        $dtr->time_log_count = $todayLoginAttempts->count();
+
+        $dtr->save();
+
+        return $dtr;
+    }
+
+    /**
+     * Process all login attempts for a user/event on a specific date
+     */
+    public function processDailyLoginAttempts(int $userId, int $eventId, string $date): DailyTimeRecord
+    {
+        // Get all successful login attempts for this user/event/date
+        $loginAttempts = LoginAttempt::where('user_id', $userId)
+            ->where('event_id', $eventId)
+            ->where('status', 'success')
+            ->whereDate('authenticated_at', $date)
+            ->orderBy('authenticated_at')
+            ->get();
+
+        if ($loginAttempts->isEmpty()) {
+            // Return existing DTR or create empty one
+            return DailyTimeRecord::firstOrCreate(
+                [
+                    'user_id' => $userId,
+                    'event_id' => $eventId,
+                    'log_date' => $date,
+                ]
+            );
+        }
+
+        // Get or create DTR for the date
+        $dtr = DailyTimeRecord::firstOrCreate(
+            [
+                'user_id' => $userId,
+                'event_id' => $eventId,
+                'log_date' => $date,
+            ]
+        );
+
+        // First login attempt = Time In
+        $firstLogin = $loginAttempts->first();
+        $dtr->actual_time_in = $firstLogin->authenticated_at;
+
+        // Calculate late minutes if scheduled time is set
+        if ($dtr->scheduled_time_in) {
+            $scheduledTime = Carbon::parse($dtr->scheduled_time_in);
+            $actualTime = Carbon::parse($firstLogin->authenticated_at);
+
+            $lateMinutes = max(0, $actualTime->diffInMinutes($scheduledTime, false));
+            if ($lateMinutes > self::LATE_THRESHOLD_MINUTES) {
+                $dtr->late_minutes = $lateMinutes - self::LATE_THRESHOLD_MINUTES;
+            } else {
+                $dtr->late_minutes = 0;
+            }
+        }
+
+        // Last login attempt = Time Out (if there are multiple)
+        if ($loginAttempts->count() > 1) {
+            $lastLogin = $loginAttempts->last();
+            $dtr->actual_time_out = $lastLogin->authenticated_at;
+
+            // Calculate total hours and overtime
+            $this->calculateHoursAndOvertime($dtr);
+        }
+
+        // Update login attempt count
+        $dtr->time_log_count = $loginAttempts->count();
+
+        $dtr->save();
+
+        return $dtr;
+    }
+    public function processTimeLog(TimeLog $timeLog, bool $isTimeOut = false): DailyTimeRecord
+    {
+        $userId = $timeLog->user_id;
+        $eventId = $timeLog->event_id;
+        $today = Carbon::today()->toDateString();
+
+        // Get or create DTR for today
+        $dtr = DailyTimeRecord::firstOrCreate(
+            [
+                'user_id' => $userId,
+                'event_id' => $eventId,
+                'log_date' => $today,
+            ]
+        );
+
         // If this is the first time-in for the day and within radius
         if (!$isTimeOut && !$dtr->actual_time_in && $timeLog->is_within_radius) {
             $dtr->actual_time_in = $timeLog->time_in;
-            
+
             // Calculate late minutes if scheduled time is set
             if ($dtr->scheduled_time_in) {
                 $scheduledTime = Carbon::parse($dtr->scheduled_time_in);
                 $actualTime = Carbon::parse($timeLog->time_in);
-                
+
                 $lateMinutes = max(0, $actualTime->diffInMinutes($scheduledTime, false));
                 if ($lateMinutes > self::LATE_THRESHOLD_MINUTES) {
                     $dtr->late_minutes = $lateMinutes - self::LATE_THRESHOLD_MINUTES;
                 }
             }
         }
-        
+
         // If time-out, check if this is the last time-out for the day
         if ($isTimeOut) {
             $lastTimeOut = TimeLog::where('user_id', $userId)
@@ -56,23 +183,23 @@ class DTRService
                 ->whereNotNull('time_out')
                 ->orderBy('time_out', 'desc')
                 ->first();
-            
+
             if ($lastTimeOut && Carbon::parse($lastTimeOut->time_out)->gt(Carbon::parse($dtr->actual_time_out ?? '00:00:00'))) {
                 $dtr->actual_time_out = $lastTimeOut->time_out;
-                
+
                 // Calculate total hours and overtime
                 $this->calculateHoursAndOvertime($dtr);
             }
         }
-        
+
         // Update time log count
         $dtr->time_log_count = TimeLog::where('user_id', $userId)
             ->where('event_id', $eventId)
             ->whereDate('time_in', $today)
             ->count();
-        
+
         $dtr->save();
-        
+
         return $dtr;
     }
     
@@ -88,9 +215,9 @@ class DTRService
         $timeIn = Carbon::parse($dtr->actual_time_in);
         $timeOut = Carbon::parse($dtr->actual_time_out);
         
-        // Subtract lunch break if it's during work hours
-        $lunchStart = Carbon::parse($dtr->log_date . ' 12:00:00');
-        $lunchEnd = Carbon::parse($dtr->log_date . ' 13:00:00');
+        // Create lunch break times for the same date as time in
+        $lunchStart = Carbon::parse($timeIn->format('Y-m-d') . ' 12:00:00');
+        $lunchEnd = Carbon::parse($timeIn->format('Y-m-d') . ' 13:00:00');
         
         // Calculate total minutes worked
         $totalMinutes = $timeIn->diffInMinutes($timeOut);

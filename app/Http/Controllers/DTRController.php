@@ -3,16 +3,28 @@
 namespace App\Http\Controllers;
 
 use App\Models\DailyTimeRecord;
+use App\Models\LoginAttempt;
+use App\Services\DTRService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class DTRController extends Controller
 {
+    protected $dtrService;
+
+    public function __construct(DTRService $dtrService)
+    {
+        $this->dtrService = $dtrService;
+    }
+
     public function index(Request $request)
     {
         $startDate = $request->query('start') ? Carbon::parse($request->query('start'))->toDateString() : today()->subDays(6)->toDateString();
         $endDate = $request->query('end') ? Carbon::parse($request->query('end'))->toDateString() : today()->toDateString();
+
+        // Process login attempts for all users/events in the date range
+        $this->processLoginAttemptsForDateRange($startDate, $endDate);
 
         $baseQuery = DailyTimeRecord::query()->dateRange($startDate, $endDate);
 
@@ -70,6 +82,28 @@ class DTRController extends Controller
             ],
             'summary' => $summary,
         ]);
+    }
+
+    /**
+     * Process login attempts for all users/events in the given date range
+     */
+    private function processLoginAttemptsForDateRange(string $startDate, string $endDate): void
+    {
+        // Get all unique user/event/date combinations that have login attempts
+        $loginAttempts = LoginAttempt::where('status', 'success')
+            ->whereBetween('authenticated_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->select('user_id', 'event_id')
+            ->selectRaw('DATE(authenticated_at) as log_date')
+            ->groupBy('user_id', 'event_id', 'log_date')
+            ->get();
+
+        foreach ($loginAttempts as $attempt) {
+            $this->dtrService->processDailyLoginAttempts(
+                $attempt->user_id,
+                $attempt->event_id,
+                $attempt->log_date
+            );
+        }
     }
 
     public function update(Request $request, DailyTimeRecord $dtr)
