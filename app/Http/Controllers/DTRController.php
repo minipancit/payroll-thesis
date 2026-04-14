@@ -67,16 +67,45 @@ class DTRController extends Controller
             ];
         });
 
+        // Group summary by employee
+        $employeeSummaries = [];
+        $employees = (clone $baseQuery)->with('user')->get()->groupBy('user_id');
+
+        foreach ($employees as $userId => $records) {
+            $user = $records->first()->user;
+            if (!$user) continue;
+
+            $employeeQuery = $records;
+
+            $employeeSummaries[] = [
+                'user_id' => $user->id,
+                'employee_id' => $user->employee_id,
+                'name' => $user->name,
+                'total_records' => $employeeQuery->count(),
+                'total_hours' => round($employeeQuery->sum('total_hours'), 2),
+                'absence_count' => $employeeQuery->whereNull('actual_time_in')->count(),
+                'late_count' => $employeeQuery->where('late_minutes', '>', 0)->count(),
+                'completed_count' => $employeeQuery->whereNotNull('actual_time_in')->whereNotNull('actual_time_out')->count(),
+                'overtime_count' => $employeeQuery->where('overtime_minutes', '>', 0)->count(),
+                'total_late_hours' => round($employeeQuery->sum('late_minutes') / 60, 2),
+                'total_undertime_hours' => round($employeeQuery->sum('undertime_minutes') / 60, 2),
+                'total_overtime_hours' => round($employeeQuery->sum('overtime_minutes') / 60, 2),
+            ];
+        }
+
+        // Sort by employee name
+        usort($employeeSummaries, function($a, $b) {
+            return strcmp($a['name'], $b['name']);
+        });
+
         $summary = [
-            'total_records' => (clone $baseQuery)->count(),
-            'total_hours' => round((clone $baseQuery)->sum('total_hours'), 2),
-            'late_count' => (clone $baseQuery)->late()->count(),
-            'absence_count' => (clone $baseQuery)->whereNull('actual_time_in')->count(),
-            'completed_count' => (clone $baseQuery)->completed()->count(),
-            'overtime_count' => (clone $baseQuery)->withOvertime()->count(),
-            'total_late_hours' => round((clone $baseQuery)->sum('late_minutes') / 60, 2),
-            'total_undertime_hours' => round((clone $baseQuery)->sum('undertime_minutes') / 60, 2),
-            'total_overtime_hours' => round((clone $baseQuery)->sum('overtime_minutes') / 60, 2),
+            'employees' => $employeeSummaries,
+            'total_employees' => count($employeeSummaries),
+            'overall_total_hours' => round(collect($employeeSummaries)->sum('total_hours'), 2),
+            'overall_absence_count' => collect($employeeSummaries)->sum('absence_count'),
+            'overall_total_late_hours' => round(collect($employeeSummaries)->sum('total_late_hours'), 2),
+            'overall_total_undertime_hours' => round(collect($employeeSummaries)->sum('total_undertime_hours'), 2),
+            'overall_total_overtime_hours' => round(collect($employeeSummaries)->sum('total_overtime_hours'), 2),
         ];
 
         return Inertia::render('Admin/DTR/Index', [

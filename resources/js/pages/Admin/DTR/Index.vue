@@ -43,15 +43,26 @@ const props = defineProps<{
         end?: string;
     };
     summary: {
-        total_records: number;
-        total_hours: number;
-        late_count: number;
-        absence_count: number;
-        completed_count: number;
-        overtime_count: number;
-        total_late_hours: number;
-        total_undertime_hours: number;
-        total_overtime_hours: number;
+        employees: Array<{
+            user_id: number;
+            employee_id: string | null;
+            name: string;
+            total_records: number;
+            total_hours: number;
+            absence_count: number;
+            late_count: number;
+            completed_count: number;
+            overtime_count: number;
+            total_late_hours: number;
+            total_undertime_hours: number;
+            total_overtime_hours: number;
+        }>;
+        total_employees: number;
+        overall_total_hours: number;
+        overall_absence_count: number;
+        overall_total_late_hours: number;
+        overall_total_undertime_hours: number;
+        overall_total_overtime_hours: number;
     };
 }>();
 
@@ -116,48 +127,27 @@ watch(
             </a>
         </template>
         <template #content>
-            <!-- Summary Cards -->
+            <!-- Overall Summary Cards -->
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
                     <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Total Hours</p>
-                    <p class="mt-2 text-3xl font-semibold">{{ props.summary.total_hours }}</p>
-                    <p class="text-xs text-muted-foreground">Completed work hours</p>
+                    <p class="mt-2 text-3xl font-semibold">{{ props.summary.overall_total_hours }}</p>
+                    <p class="text-xs text-muted-foreground">All employees combined</p>
                 </div>
                 <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
-                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Absences</p>
-                    <p class="mt-2 text-3xl font-semibold">{{ props.summary.absence_count }}</p>
-                    <p class="text-xs text-muted-foreground">Days with no time-in</p>
+                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Total Absences</p>
+                    <p class="mt-2 text-3xl font-semibold">{{ props.summary.overall_absence_count }}</p>
+                    <p class="text-xs text-muted-foreground">Across all employees</p>
                 </div>
                 <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
-                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Late Hours</p>
-                    <p class="mt-2 text-3xl font-semibold text-amber-600">{{ props.summary.total_late_hours }}</p>
-                    <p class="text-xs text-muted-foreground">Total late time (hours)</p>
+                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Total Late Hours</p>
+                    <p class="mt-2 text-3xl font-semibold text-amber-600">{{ props.summary.overall_total_late_hours }}</p>
+                    <p class="text-xs text-muted-foreground">All employees combined</p>
                 </div>
                 <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
-                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Undertime Hours</p>
-                    <p class="mt-2 text-3xl font-semibold text-red-600">{{ props.summary.total_undertime_hours }}</p>
-                    <p class="text-xs text-muted-foreground">Total undertime (hours)</p>
-                </div>
-            </div>
-
-            <!-- Additional Summary Row -->
-            <div class="grid gap-4 md:grid-cols-3">
-                <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
-                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Overtime Hours</p>
-                    <p class="mt-2 text-3xl font-semibold text-green-600">{{ props.summary.total_overtime_hours }}</p>
-                    <p class="text-xs text-muted-foreground">Total overtime (hours)</p>
-                </div>
-                <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
-                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Records</p>
-                    <p class="mt-2 text-3xl font-semibold">{{ props.summary.total_records }}</p>
-                    <p class="text-xs text-muted-foreground">Total DTR entries</p>
-                </div>
-                <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
-                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Completion Rate</p>
-                    <p class="mt-2 text-3xl font-semibold">
-                        {{ props.summary.total_records > 0 ? Math.round((props.summary.completed_count / props.summary.total_records) * 100) : 0 }}%
-                    </p>
-                    <p class="text-xs text-muted-foreground">{{ props.summary.completed_count }} completed</p>
+                    <p class="text-sm uppercase tracking-[0.16em] text-muted-foreground">Total Employees</p>
+                    <p class="mt-2 text-3xl font-semibold">{{ props.summary.total_employees }}</p>
+                    <p class="text-xs text-muted-foreground">With records in period</p>
                 </div>
             </div>
 
@@ -178,6 +168,44 @@ watch(
                         v-model="filters.end"
                     />
                 </label>
+            </div>
+
+            <!-- Employee-wise Summary -->
+            <div class="rounded-xl border border-sidebar-border/70 bg-background p-4">
+                <h3 class="text-lg font-semibold mb-4">Employee Summary ({{ filters.start }} to {{ filters.end }})</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left py-2 px-2">Employee</th>
+                                <th class="text-right py-2 px-2">Total Hours</th>
+                                <th class="text-right py-2 px-2">Absences</th>
+                                <th class="text-right py-2 px-2">Late Hours</th>
+                                <th class="text-right py-2 px-2">Undertime</th>
+                                <th class="text-right py-2 px-2">Overtime</th>
+                                <th class="text-right py-2 px-2">Records</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="employee in props.summary.employees"
+                                :key="employee.user_id"
+                                class="border-b hover:bg-muted/50"
+                            >
+                                <td class="py-2 px-2">
+                                    <div class="font-medium">{{ employee.name }}</div>
+                                    <div class="text-xs text-muted-foreground">{{ employee.employee_id }}</div>
+                                </td>
+                                <td class="text-right py-2 px-2 font-mono">{{ employee.total_hours }}</td>
+                                <td class="text-right py-2 px-2">{{ employee.absence_count }}</td>
+                                <td class="text-right py-2 px-2 font-mono text-amber-600">{{ employee.total_late_hours }}</td>
+                                <td class="text-right py-2 px-2 font-mono text-red-600">{{ employee.total_undertime_hours }}</td>
+                                <td class="text-right py-2 px-2 font-mono text-green-600">{{ employee.total_overtime_hours }}</td>
+                                <td class="text-right py-2 px-2">{{ employee.total_records }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div class="overflow-x-auto rounded-xl border border-sidebar-border/70 bg-background p-4">
